@@ -1,5 +1,0 @@
-{
-  "routes": [
-    { "src": "/file/(.*)", "dest": "/file/$1" }
-  ]
-}
