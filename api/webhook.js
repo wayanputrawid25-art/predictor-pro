@@ -1,24 +1,30 @@
 export default async function handler(req, res) {
   const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
 
+  if (req.method !== "POST") {
+    return res.status(200).json({ ok: true });
+  }
+
   try {
-    if (req.method !== "POST") {
+    let rawData = "";
+
+    await new Promise((resolve) => {
+      req.on("data", chunk => rawData += chunk);
+      req.on("end", resolve);
+    });
+
+    const body = JSON.parse(rawData);
+
+    if (!body.message) {
       return res.status(200).json({ ok: true });
     }
 
-    const body = req.body;
+    const chatId = body.message.chat.id;
 
-    // fallback kalau body kosong
-    const data = body && Object.keys(body).length ? body : JSON.parse(req.body || "{}");
-
-    if (!data.message) {
-      return res.status(200).json({ ok: true });
-    }
-
-    const chatId = data.message.chat.id;
-    const text = (data.message.text || "").toLowerCase();
-
-    if (text.includes("bukti")) {
+    // =========================
+    // 📸 JIKA USER KIRIM FOTO
+    // =========================
+    if (body.message.photo) {
 
       await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendDocument`, {
         method: "POST",
@@ -26,18 +32,66 @@ export default async function handler(req, res) {
         body: JSON.stringify({
           chat_id: chatId,
           document: "https://predictor-pro-two.vercel.app/file/predictor-pro.zip",
-          caption: "✅ Pembayaran dikonfirmasi!\n\n📦 Tools:\n1. Extract file\n2. Buka index.html\n3. Jalankan di browser / Acode"
+          caption:
+`✅ PEMBAYARAN DITERIMA
+
+📦 Tools Predictor Pro Elite:
+Silakan download file di atas
+
+━━━━━━━━━━━━━━━━━━━
+📌 Cara Pakai:
+
+1. Extract file .zip
+2. Buka file index.html
+3. Jalankan di browser / Acode
+
+━━━━━━━━━━━━━━━━━━━
+💡 Tips:
+Gunakan data 7–14 hari agar hasil lebih optimal
+
+Terima kasih 🙏`
         })
       });
 
     } else {
 
+      // =========================
+      // 💬 PESAN AWAL / SALAH FORMAT
+      // =========================
       await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           chat_id: chatId,
-          text: "Halo 👋\n\n💰 Pembelian:\n1. Transfer GoPay\n2. Ketik: BUKTI\n\nFile dikirim otomatis"
+          text:
+`💎 PREDICTOR PRO ELITE
+
+Tools analisa angka berbasis:
+✔ Hot & Cool
+✔ BBFS otomatis
+✔ Sistem Kembar
+✔ Output 2D 32 Line
+
+━━━━━━━━━━━━━━━━━━━
+💰 PEMBELIAN
+
+Harga: Rp15.000
+
+GoPay: 08123834801
+a.n: I Wayan Putra Widnyana
+
+━━━━━━━━━━━━━━━━━━━
+📌 WAJIB:
+✔ Transfer + kode unik
+✔ Contoh: 15.137
+
+━━━━━━━━━━━━━━━━━━━
+🧾 SETELAH BAYAR:
+1. Screenshot bukti (FULL)
+2. Kirim ke sini (WAJIB FOTO)
+
+━━━━━━━━━━━━━━━━━━━
+⚠️ TANPA FOTO → TIDAK DIPROSES`
         })
       });
 
