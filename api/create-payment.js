@@ -6,10 +6,6 @@ export default async function handler(req, res) {
     const VA = process.env.IPAYMU_VA;
     const BASE_URL = process.env.BASE_URL;
 
-    if (!API_KEY || !VA || !BASE_URL) {
-      return res.status(500).json({ error: "ENV belum lengkap" });
-    }
-
     const referenceId = `TRX-${chatId}-${Date.now()}`;
 
     const body = {
@@ -32,13 +28,21 @@ export default async function handler(req, res) {
     });
 
     const text = await response.text();
-    console.log("IPAYMU RAW:", text);
+    console.log("IPAYMU RESPONSE:", text);
 
     let data;
     try {
       data = JSON.parse(text);
     } catch {
-      return res.status(500).json({ error: "Response iPaymu invalid" });
+      return res.status(500).json({ error: "Response bukan JSON", raw: text });
+    }
+
+    // 🔥 DEBUG FULL
+    if (!data?.Data?.Url && !data?.url) {
+      return res.status(200).json({
+        error: "URL tidak ditemukan",
+        full_response: data
+      });
     }
 
     return res.status(200).json(data);
