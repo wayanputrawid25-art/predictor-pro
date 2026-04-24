@@ -1,35 +1,51 @@
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(200).json({ message: "OK" });
-  }
-
   const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
-  const CHAT_ID = process.env.CHAT_ID;
 
   try {
-    const data = req.body;
+    if (req.method !== "POST") {
+      return res.status(200).json({ ok: true });
+    }
 
-    // cek status pembayaran
-    if (data.transaction_status === "settlement") {
+    const body = req.body;
 
-      const fileUrl = "https://YOUR-VERCEL-URL.vercel.app/file/predictor-pro.zip";
+    // fallback kalau body kosong
+    const data = body && Object.keys(body).length ? body : JSON.parse(req.body || "{}");
 
-      // kirim file ke user
+    if (!data.message) {
+      return res.status(200).json({ ok: true });
+    }
+
+    const chatId = data.message.chat.id;
+    const text = (data.message.text || "").toLowerCase();
+
+    if (text.includes("bukti")) {
+
       await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendDocument`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          chat_id: CHAT_ID,
-          document: fileUrl,
-          caption: "✅ Pembayaran berhasil!\n\nIni tools kamu.\n\nCara pakai:\n1. Extract file\n2. Buka index.html\n3. Jalankan di browser / Acode"
+          chat_id: chatId,
+          document: "https://predictor-pro-two.vercel.app/file/predictor-pro.zip",
+          caption: "✅ Pembayaran dikonfirmasi!\n\n📦 Tools:\n1. Extract file\n2. Buka index.html\n3. Jalankan di browser / Acode"
+        })
+      });
+
+    } else {
+
+      await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: "Halo 👋\n\n💰 Pembelian:\n1. Transfer GoPay\n2. Ketik: BUKTI\n\nFile dikirim otomatis"
         })
       });
 
     }
 
-    res.status(200).json({ success: true });
+    return res.status(200).json({ ok: true });
 
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 }
