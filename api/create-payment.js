@@ -19,10 +19,10 @@ export default async function handler(req, res) {
 
     const bodyString = JSON.stringify(body);
 
-    // 🔥 SIGNATURE WAJIB
+    // 🔥 SIGNATURE YANG BENAR
     const signature = crypto
       .createHash("sha256")
-      .update(bodyString + API_KEY)
+      .update(VA + API_KEY + bodyString)
       .digest("hex");
 
     const response = await fetch("https://my.ipaymu.com/api/v2/payment", {
@@ -36,7 +36,10 @@ export default async function handler(req, res) {
       body: bodyString
     });
 
-    const data = await response.json();
+    const text = await response.text();
+    console.log("IPAYMU:", text);
+
+    const data = JSON.parse(text);
 
     res.status(200).json(data);
 
