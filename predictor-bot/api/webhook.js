@@ -1,35 +1,39 @@
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(200).json({ message: "OK" });
-  }
-
   const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
-  const CHAT_ID = process.env.CHAT_ID;
 
-  try {
-    const data = req.body;
+  if (req.method === "POST") {
+    const body = req.body;
 
-    // cek status pembayaran
-    if (data.transaction_status === "settlement") {
+    if (body.message) {
+      const chatId = body.message.chat.id;
+      const text = body.message.text || "";
 
-      const fileUrl = "https://YOUR-VERCEL-URL.vercel.app/file/predictor-pro.zip";
+      // kalau user kirim bukti / keyword
+      if (text.toLowerCase().includes("bukti")) {
 
-      // kirim file ke user
-      await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendDocument`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: CHAT_ID,
-          document: fileUrl,
-          caption: "✅ Pembayaran berhasil!\n\nIni tools kamu.\n\nCara pakai:\n1. Extract file\n2. Buka index.html\n3. Jalankan di browser / Acode"
-        })
-      });
+        await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendDocument`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: chatId,
+            document: "https://predictor-pro-two.vercel.app/file/predictor-pro.zip",
+            caption: "✅ Pembayaran dikonfirmasi\n\nIni tools kamu.\n\nCara pakai:\n1. Extract file\n2. Buka index.html\n3. Jalankan di browser / Acode"
+          })
+        });
 
+      } else {
+        // pesan awal
+        await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: chatId,
+            text: "Halo 👋\n\nUntuk pembelian:\n1. Transfer ke GoPay\n2. Kirim bukti dengan ketik: BUKTI"
+          })
+        });
+      }
     }
-
-    res.status(200).json({ success: true });
-
-  } catch (err) {
-    res.status(500).json({ error: err.message });
   }
+
+  res.status(200).json({ ok: true });
 }
