@@ -7,9 +7,9 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "XENDIT_SECRET kosong" });
     }
 
-    const external_id = "trx-" + chatId + "-" + Date.now();
+    const external_id = `trx-${chatId}-${Date.now()}`;
 
-    const response = await fetch("https://api.xendit.co/v2/invoices", {
+    const r = await fetch("https://api.xendit.co/v2/invoices", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -24,19 +24,15 @@ export default async function handler(req, res) {
       })
     });
 
-    const text = await response.text();
+    const text = await r.text();
     console.log("XENDIT RAW:", text);
 
     let data;
-    try {
-      data = JSON.parse(text);
-    } catch {
-      return res.status(500).json({ error: "Response bukan JSON", raw: text });
-    }
+    try { data = JSON.parse(text); }
+    catch { return res.status(500).json({ error: "Response bukan JSON", raw: text }); }
 
     return res.status(200).json(data);
-
-  } catch (err) {
-    return res.status(500).json({ error: err.message });
+  } catch (e) {
+    return res.status(500).json({ error: e.message });
   }
 }
