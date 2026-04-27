@@ -45,31 +45,42 @@ Klik beli:`,
     // BUTTON
     // ======================
     if (body.callback_query) {
-      const chatId = body.callback_query.message.chat.id;
+  const chatId = body.callback_query.message.chat.id;
 
-      // jawab callback WAJIB
-      await fetch(`https://api.telegram.org/bot${TOKEN}/answerCallbackQuery`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          callback_query_id: body.callback_query.id
-        })
-      });
+  // 1. jawab callback (WAJIB)
+  await fetch(`https://api.telegram.org/bot${TOKEN}/answerCallbackQuery`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      callback_query_id: body.callback_query.id,
+      text: "Memproses..."
+    })
+  });
 
-      userState[chatId] = Date.now();
+  // 2. simpan state
+  userState[chatId] = Date.now();
 
-      await sendMsg(chatId,
+  // 3. kirim pesan (PASTIKAN await)
+  await fetch(`https://api.telegram.org/bot${TOKEN}/sendMessage`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      chat_id: chatId,
+      text:
 `💰 PEMBAYARAN
 
 Transfer ke:
-${PAYMENT}
+${process.env.PAYMENT_INFO}
 
 📸 Kirim screenshot bukti setelah bayar
 
-⏰ berlaku 30 menit`);
+⏰ berlaku 30 menit`
+    })
+  });
 
-      return res.status(200).end();
-    }
+  // 4. STOP di sini (WAJIB)
+  return res.status(200).end();
+}
 
     // ======================
     // FOTO → OCR
