@@ -3,9 +3,9 @@ const userState = {};
 export default async function handler(req, res) {
   try {
     const TOKEN = process.env.TELEGRAM_TOKEN;
-    const PAYMENT_LINK = process.env.PAYMENT_LINK;
     const BASE_URL = process.env.BASE_URL;
     const OCR_KEY = process.env.OCR_API_KEY;
+    const PAYMENT = process.env.PAYMENT_INFO;
 
     let raw = "";
     await new Promise(r => {
@@ -28,42 +28,48 @@ export default async function handler(req, res) {
 
 Harga: Rp15.000
 
+💳 Pembayaran:
+${PAYMENT}
+
 Klik beli:`,
       {
         inline_keyboard: [[
           { text: "💰 BELI SEKARANG", callback_data: "buy" }
         ]]
       });
+
+      return res.status(200).end();
     }
 
     // ======================
     // BUTTON
     // ======================
-   if (body.callback_query) {
-  const chatId = body.callback_query.message.chat.id;
+    if (body.callback_query) {
+      const chatId = body.callback_query.message.chat.id;
 
-  // WAJIB: jawab callback
-  await fetch(`https://api.telegram.org/bot${TOKEN}/answerCallbackQuery`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      callback_query_id: body.callback_query.id
-    })
-  });
+      // jawab callback WAJIB
+      await fetch(`https://api.telegram.org/bot${TOKEN}/answerCallbackQuery`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          callback_query_id: body.callback_query.id
+        })
+      });
 
-  userState[chatId] = Date.now();
+      userState[chatId] = Date.now();
 
-  await sendMsg(chatId,
-`💰 PEMBAYARAN QRIS
+      await sendMsg(chatId,
+`💰 PEMBAYARAN
 
-Bayar di link:
-${PAYMENT_LINK}
+Transfer ke:
+${PAYMENT}
 
-📸 Setelah bayar:
-kirim screenshot bukti
+📸 Kirim screenshot bukti setelah bayar
 
 ⏰ berlaku 30 menit`);
-}
+
+      return res.status(200).end();
+    }
 
     // ======================
     // FOTO → OCR
@@ -75,7 +81,7 @@ kirim screenshot bukti
         return sendMsg(chatId, "❌ Klik beli dulu");
       }
 
-      // cek expired
+      // expired
       if (Date.now() - userState[chatId] > 30 * 60 * 1000) {
         delete userState[chatId];
         return sendMsg(chatId, "⏰ Transaksi expired");
@@ -95,25 +101,29 @@ kirim screenshot bukti
           apikey: OCR_KEY,
           "Content-Type": "application/x-www-form-urlencoded"
         },
-        body: `url=${fileUrl}&language=eng`
+        body: `url=${fileUrl}`
       });
 
       const ocrData = await ocrRes.json();
       const text = ocrData?.ParsedResults?.[0]?.ParsedText || "";
 
-      console.log("OCR:", text);
+      const t = text.toLowerCase();
 
-      // VALIDASI
       const validNominal =
         text.includes("15000") ||
         text.includes("15.000") ||
         text.includes("15,000");
 
       const validQRIS =
-        text.toLowerCase().includes("qris") ||
-        text.toLowerCase().includes("gopay");
+        t.includes("qris") ||
+        t.includes("gopay") ||
+        t.includes("dana");
 
-      if (validNominal && validQRIS) {
+      const validStatus =
+        t.includes("berhasil") ||
+        t.includes("success");
+
+      if (validNominal && validQRIS && validStatus) {
         await sendFile(chatId, BASE_URL);
         delete userState[chatId];
       } else {
@@ -122,8 +132,11 @@ kirim screenshot bukti
 
 Pastikan:
 ✔ nominal 15000
-✔ ada QRIS / GoPay`);
+✔ ada QRIS/DANA/GoPay
+✔ status berhasil`);
       }
+
+      return res.status(200).end();
     }
 
     res.status(200).end();
