@@ -24,9 +24,10 @@ export default async function handler(req, res) {
       })
     });
 
-    const text = await r.text();
-    console.log("XENDIT RAW:", text);
+    const text = await response.text();
+console.log("XENDIT RAW:", text);
 
+return res.status(200).send(text);
     let data;
     try { data = JSON.parse(text); }
     catch { return res.status(500).json({ error: "Response bukan JSON", raw: text }); }
