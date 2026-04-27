@@ -39,12 +39,21 @@ Klik beli:`,
     // ======================
     // BUTTON
     // ======================
-    if (body.callback_query) {
-      const chatId = body.callback_query.message.chat.id;
+   if (body.callback_query) {
+  const chatId = body.callback_query.message.chat.id;
 
-      userState[chatId] = Date.now();
+  // WAJIB: jawab callback
+  await fetch(`https://api.telegram.org/bot${TOKEN}/answerCallbackQuery`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      callback_query_id: body.callback_query.id
+    })
+  });
 
-      await sendMsg(chatId,
+  userState[chatId] = Date.now();
+
+  await sendMsg(chatId,
 `💰 PEMBAYARAN QRIS
 
 Bayar di link:
@@ -54,7 +63,7 @@ ${PAYMENT_LINK}
 kirim screenshot bukti
 
 ⏰ berlaku 30 menit`);
-    }
+}
 
     // ======================
     // FOTO → OCR
