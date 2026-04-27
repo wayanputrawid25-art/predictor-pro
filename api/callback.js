@@ -8,8 +8,16 @@ export default async function handler(req, res) {
     req.on("end", r);
   });
 
-  const data = JSON.parse(raw);
+  let data;
+  try {
+    data = JSON.parse(raw);
+  } catch {
+    return res.status(200).end();
+  }
 
+  console.log("CALLBACK:", data);
+
+  // hanya kirim kalau PAID
   if (data.status === "PAID") {
     const chatId = data.external_id.split("-")[1];
 
@@ -19,10 +27,18 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         chat_id: chatId,
         document: `${BASE_URL}/file/predictor-pro.zip`,
-        caption: "✅ Pembayaran berhasil\n\nFile dikirim otomatis"
+        caption:
+`✅ Pembayaran berhasil
+
+📦 File sudah dikirim
+
+📌 Cara pakai:
+1. Extract file
+2. Buka index.html
+3. Jalankan di browser`
       })
     });
   }
 
-  res.status(200).end();
+  res.status(200).json({ ok: true });
 }
