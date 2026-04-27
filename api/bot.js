@@ -8,71 +8,39 @@ export default async function handler(req, res) {
       req.on("data", c => raw += c);
       req.on("end", r);
     });
+    if (!raw) return res.status(200).end();
 
-    if (!raw) return res.status(200).json({ ok: true });
+    const body = JSON.parse(raw);
 
-    let body;
-    try {
-      body = JSON.parse(raw);
-    } catch {
-      return res.status(200).json({ ok: true });
-    }
-
-    // ======================
-    // BUTTON CLICK
-    // ======================
+    // tombol beli
     if (body.callback_query) {
       const chatId = body.callback_query.message.chat.id;
 
-      try {
-        const inv = await fetch(`${BASE_URL}/api/create-invoice?chatId=${chatId}`);
-        const text = await inv.text();
+      const inv = await fetch(`${BASE_URL}/api/create-invoice?chatId=${chatId}`);
+      const data = await inv.json();
 
-        console.log("INVOICE RAW:", text);
-
-        let data;
-        try {
-          data = JSON.parse(text);
-        } catch {
-          throw new Error("Response bukan JSON");
-        }
-
-        const payUrl = data.invoice_url;
-
-        if (!payUrl) {
-          throw new Error("invoice_url tidak ada");
-        }
-
-        await sendMsg(chatId,
-`💰 Pembayaran QRIS
-
-Klik link di bawah:
-${payUrl}
-
-Setelah bayar → file otomatis dikirim`);
-
-      } catch (err) {
-        console.error("ERROR CREATE INVOICE:", err.message);
-
-        await sendMsg(chatId,
-"❌ Gagal membuat pembayaran\nCoba lagi nanti");
+      if (!data.invoice_url) {
+        await sendMsg(chatId, "❌ Gagal membuat invoice. Coba lagi.");
+        return res.status(200).end();
       }
 
-      return res.status(200).json({ ok: true });
+      await sendMsg(chatId,
+`💰 Pembayaran QRIS
+
+Silakan bayar di:
+${data.invoice_url}
+
+Setelah bayar → file otomatis dikirim`);
     }
 
-    // ======================
-    // START
-    // ======================
+    // start
     if (body.message?.text === "/start") {
-      const chatId = body.message.chat.id;
-
-      await sendMsg(chatId,
+      await sendMsg(body.message.chat.id,
 `💎 Predictor Pro Elite
 
 Harga: Rp15.000
 
-Klik tombol untuk beli:`,
+Klik beli:`,
       {
         inline_keyboard: [[
           { text: "💰 BELI SEKARANG", callback_data: "buy" }
@@ -80,25 +48,18 @@ Klik tombol untuk beli:`,
       });
     }
 
-    return res.status(200).json({ ok: true });
-
-  } catch (err) {
-    console.error("FATAL:", err.message);
-    return res.status(200).json({ ok: true });
+    return res.status(200).end();
+  } catch (e) {
+    console.error(e);
+    return res.status(200).end();
   }
 }
 
-// helper
-async function sendMsg(chatId, text, replyMarkup = null) {
+async function sendMsg(chatId, text, reply_markup=null) {
   const TOKEN = process.env.TELEGRAM_TOKEN;
-
   await fetch(`https://api.telegram.org/bot${TOKEN}/sendMessage`, {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({
-      chat_id: chatId,
-      text,
-      reply_markup: replyMarkup
-    })
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({ chat_id: chatId, text, reply_markup })
   });
 }
