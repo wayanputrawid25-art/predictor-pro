@@ -25,7 +25,7 @@ module.exports = async function handler(req, res) {
       .update(va + ":" + jsonBody)
       .digest("hex");
 
-    const response = await fetch("https://sandbox.ipaymu.com/api/v2/payment", {
+    const response = await fetch("https://my.ipaymu.com/api/v2/payment", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
