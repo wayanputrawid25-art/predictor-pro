@@ -24,9 +24,10 @@ module.exports = async function handler(req, res) {
 
     const jsonBody = JSON.stringify(body);
 
+    // ✅ FIX SIGNATURE
     const signature = crypto
       .createHmac("sha256", apiKey)
-      .update(jsonBody)
+      .update(va + ":" + jsonBody)
       .digest("hex");
 
     const response = await fetch("https://sandbox.ipaymu.com/api/v2/payment", {
@@ -44,12 +45,11 @@ module.exports = async function handler(req, res) {
     try {
       result = await response.json();
     } catch (e) {
-      console.log("IPAYMU PARSE ERROR");
+      console.log("PARSE ERROR");
     }
 
     console.log("IPAYMU RESPONSE:", result);
 
-    // ❌ kalau gagal
     if (!result || result.Status !== 200) {
       return res.status(200).json({
         error: "ipaymu gagal",
