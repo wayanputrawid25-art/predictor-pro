@@ -1,6 +1,6 @@
 const crypto = require("crypto");
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   try {
     const va = process.env.IPAYMU_VA;
     const apiKey = process.env.IPAYMU_API_KEY;
@@ -8,9 +8,7 @@ export default async function handler(req, res) {
     const { chatId } = req.query;
 
     if (!va || !apiKey) {
-      return res.status(500).json({
-        error: "ENV belum lengkap"
-      });
+      return res.status(200).json({ error: "ENV kosong" });
     }
 
     const ref = "TRX-" + Date.now();
@@ -41,11 +39,17 @@ export default async function handler(req, res) {
       body: jsonBody
     });
 
-    const result = await response.json();
+    let result = null;
+
+    try {
+      result = await response.json();
+    } catch (e) {
+      console.log("IPAYMU PARSE ERROR");
+    }
 
     console.log("IPAYMU RESPONSE:", result);
 
-    // ❌ gagal
+    // ❌ kalau gagal
     if (!result || result.Status !== 200) {
       return res.status(200).json({
         error: "ipaymu gagal",
@@ -53,16 +57,13 @@ export default async function handler(req, res) {
       });
     }
 
-    const url = result?.Data?.Url;
-
-    if (!url) {
+    if (!result.Data || !result.Data.Url) {
       return res.status(200).json({
         error: "URL kosong",
         detail: result
       });
     }
 
-    // simpan mapping
     globalThis.orders = globalThis.orders || {};
     globalThis.orders[ref] = chatId;
 
@@ -70,8 +71,6 @@ export default async function handler(req, res) {
 
   } catch (err) {
     console.error("CREATE PAYMENT ERROR:", err);
-    return res.status(200).json({
-      error: "server error"
-    });
+    return res.status(200).json({ error: "server error" });
   }
-}
+};
