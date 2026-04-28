@@ -1,4 +1,4 @@
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   try {
     const TOKEN = process.env.TELEGRAM_TOKEN;
     const BASE_URL = process.env.BASE_URL;
