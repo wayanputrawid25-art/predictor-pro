@@ -1,14 +1,8 @@
 module.exports = async function handler(req, res) {
   try {
-    let raw = "";
-    await new Promise(resolve => {
-      req.on("data", chunk => raw += chunk);
-      req.on("end", resolve);
-    });
-
-    if (!raw) return res.status(200).end();
-
-    const data = JSON.parse(raw);
+    const data = typeof req.body === "string"
+      ? JSON.parse(req.body)
+      : req.body;
 
     console.log("CALLBACK:", data);
 
@@ -29,10 +23,10 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    return res.status(200).end();
+    res.status(200).send("OK");
 
-  } catch (err) {
-    console.error("CALLBACK ERROR:", err);
-    return res.status(200).end();
+  } catch (e) {
+    console.error(e);
+    res.status(200).send("OK");
   }
 };
