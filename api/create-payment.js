@@ -7,13 +7,21 @@ export default async function handler(req, res) {
 
     const { chatId } = req.query;
 
+    if (!va || !apiKey) {
+      return res.status(500).json({
+        error: "ENV belum lengkap"
+      });
+    }
+
+    const ref = "TRX-" + Date.now();
+
     const body = {
       product: ["Predictor Pro Elite"],
       qty: ["1"],
       price: ["15000"],
-      returnUrl: "https://t.me/yourbot",
+      returnUrl: "https://t.me/",
       notifyUrl: process.env.BASE_URL + "/api/callback",
-      referenceId: "TRX-" + Date.now()
+      referenceId: ref
     };
 
     const jsonBody = JSON.stringify(body);
@@ -35,14 +43,35 @@ export default async function handler(req, res) {
 
     const result = await response.json();
 
+    console.log("IPAYMU RESPONSE:", result);
+
+    // ❌ gagal
+    if (!result || result.Status !== 200) {
+      return res.status(200).json({
+        error: "ipaymu gagal",
+        detail: result
+      });
+    }
+
+    const url = result?.Data?.Url;
+
+    if (!url) {
+      return res.status(200).json({
+        error: "URL kosong",
+        detail: result
+      });
+    }
+
     // simpan mapping
     globalThis.orders = globalThis.orders || {};
-    globalThis.orders[result.Data.ReferenceId] = chatId;
+    globalThis.orders[ref] = chatId;
 
-    res.status(200).json(result);
+    return res.status(200).json(result);
 
   } catch (err) {
-    console.error(err);
-    res.status(500).end();
+    console.error("CREATE PAYMENT ERROR:", err);
+    return res.status(200).json({
+      error: "server error"
+    });
   }
 }
