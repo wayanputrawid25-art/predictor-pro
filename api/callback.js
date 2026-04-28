@@ -1,4 +1,4 @@
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   try {
     let raw = "";
     await new Promise(resolve => {
@@ -12,7 +12,6 @@ export default async function handler(req, res) {
 
     console.log("CALLBACK:", data);
 
-    // hanya kalau sukses
     if (data.Status === 200) {
       const ref = data.Data?.ReferenceId;
       const chatId = globalThis.orders?.[ref];
@@ -36,4 +35,4 @@ export default async function handler(req, res) {
     console.error("CALLBACK ERROR:", err);
     return res.status(200).end();
   }
-}
+};
