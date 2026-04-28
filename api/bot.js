@@ -3,26 +3,30 @@ module.exports = async function handler(req, res) {
     const TOKEN = process.env.TELEGRAM_TOKEN;
     const BASE_URL = process.env.BASE_URL;
 
+    // ======================
+    // READ BODY (ANTI ERROR)
+    // ======================
     let raw = "";
-await new Promise(resolve => {
-  req.on("data", chunk => raw += chunk);
-  req.on("end", resolve);
-});
+    await new Promise(resolve => {
+      req.on("data", chunk => raw += chunk);
+      req.on("end", resolve);
+    });
 
-// ✅ WAJIB: kalau kosong jangan parse
-if (!raw) {
-  return res.status(200).end();
-}
+    if (!raw) {
+      return res.status(200).end();
+    }
 
-let body;
-try {
-  body = JSON.parse(raw);
-} catch (e) {
-  console.log("JSON ERROR:", raw);
-  return res.status(200).end();
-}
+    let body;
+    try {
+      body = JSON.parse(raw);
+    } catch (e) {
+      console.log("JSON ERROR:", raw);
+      return res.status(200).end();
+    }
 
-    // ===== START
+    // ======================
+    // START COMMAND
+    // ======================
     if (body.message?.text === "/start") {
       const chatId = body.message.chat.id;
 
@@ -41,11 +45,13 @@ Klik beli:`,
       return res.status(200).end();
     }
 
-    // ===== BUTTON
+    // ======================
+    // BUTTON CLICK
+    // ======================
     if (body.callback_query) {
       const chatId = body.callback_query.message.chat.id;
 
-      // jawab callback WAJIB
+      // WAJIB jawab callback
       await fetch(`https://api.telegram.org/bot${TOKEN}/answerCallbackQuery`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -54,27 +60,37 @@ Klik beli:`,
         })
       });
 
-      // request ke create payment
-      const payRes = await fetch(`${BASE_URL}/api/create-payment?chatId=${chatId}`);
-      const data = await payRes.json();
+      // ======================
+      // CREATE PAYMENT
+      // ======================
+      let data = null;
+
+      try {
+        const payRes = await fetch(`${BASE_URL}/api/create-payment?chatId=${chatId}`);
+        data = await payRes.json();
+      } catch (e) {
+        console.log("FETCH ERROR:", e);
+      }
 
       console.log("PAY RESPONSE:", data);
 
-      // ❌ kalau error
+      // ❌ gagal
       if (!data || data.error) {
-        return sendMsg(chatId, "❌ Gagal membuat pembayaran");
+        await sendMsg(chatId, "❌ Gagal membuat pembayaran, coba lagi");
+        return res.status(200).end();
       }
 
-      if (!data || data.error) {
-  return sendMsg(chatId, "❌ Gagal membuat pembayaran");
-}
+      const url = data?.Data?.Url;
 
-const url = data?.Data?.Url;
+      // ❌ url kosong
+      if (!url) {
+        await sendMsg(chatId, "❌ Link pembayaran tidak tersedia");
+        return res.status(200).end();
+      }
 
-if (!url) {
-  return sendMsg(chatId, "❌ Link pembayaran tidak tersedia");
-}
-
+      // ======================
+      // SUCCESS
+      // ======================
       await sendMsg(chatId,
 `💳 Pembayaran
 
@@ -92,9 +108,11 @@ Setelah bayar file otomatis dikirim`);
     console.error("BOT ERROR:", err);
     return res.status(200).end();
   }
-}
+};
 
-// helper
+// ======================
+// HELPER SEND MESSAGE
+// ======================
 async function sendMsg(chatId, text, reply_markup=null) {
   const TOKEN = process.env.TELEGRAM_TOKEN;
 
