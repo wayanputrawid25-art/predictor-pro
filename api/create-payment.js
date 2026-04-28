@@ -7,10 +7,6 @@ module.exports = async function handler(req, res) {
 
     const { chatId } = req.query;
 
-    if (!va || !apiKey) {
-      return res.status(200).json({ error: "ENV kosong" });
-    }
-
     const ref = "TRX-" + Date.now();
 
     const body = {
@@ -24,7 +20,6 @@ module.exports = async function handler(req, res) {
 
     const jsonBody = JSON.stringify(body);
 
-    // ✅ FIX SIGNATURE
     const signature = crypto
       .createHmac("sha256", apiKey)
       .update(va + ":" + jsonBody)
@@ -40,37 +35,21 @@ module.exports = async function handler(req, res) {
       body: jsonBody
     });
 
-    let result = null;
+    const result = await response.json();
 
-    try {
-      result = await response.json();
-    } catch (e) {
-      console.log("PARSE ERROR");
-    }
-
-    console.log("IPAYMU RESPONSE:", result);
+    console.log("IPAYMU:", result);
 
     if (!result || result.Status !== 200) {
-      return res.status(200).json({
-        error: "ipaymu gagal",
-        detail: result
-      });
-    }
-
-    if (!result.Data || !result.Data.Url) {
-      return res.status(200).json({
-        error: "URL kosong",
-        detail: result
-      });
+      return res.status(200).json({ error: "ipaymu gagal", detail: result });
     }
 
     globalThis.orders = globalThis.orders || {};
     globalThis.orders[ref] = chatId;
 
-    return res.status(200).json(result);
+    res.status(200).json(result);
 
-  } catch (err) {
-    console.error("CREATE PAYMENT ERROR:", err);
-    return res.status(200).json({ error: "server error" });
+  } catch (e) {
+    console.error(e);
+    res.status(200).json({ error: "server error" });
   }
 };
