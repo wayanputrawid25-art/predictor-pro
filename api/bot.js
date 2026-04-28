@@ -4,21 +4,23 @@ module.exports = async function handler(req, res) {
     const BASE_URL = process.env.BASE_URL;
 
     let raw = "";
-    await new Promise(resolve => {
-      req.on("data", chunk => raw += chunk);
-      req.on("end", resolve);
-    });
+await new Promise(resolve => {
+  req.on("data", chunk => raw += chunk);
+  req.on("end", resolve);
+});
 
-    // ✅ kalau kosong → skip
-    if (!raw) return res.status(200).end();
+// ✅ WAJIB: kalau kosong jangan parse
+if (!raw) {
+  return res.status(200).end();
+}
 
-    let body;
-    try {
-      body = JSON.parse(raw);
-    } catch (e) {
-      console.log("JSON ERROR:", raw);
-      return res.status(200).end();
-    }
+let body;
+try {
+  body = JSON.parse(raw);
+} catch (e) {
+  console.log("JSON ERROR:", raw);
+  return res.status(200).end();
+}
 
     // ===== START
     if (body.message?.text === "/start") {
