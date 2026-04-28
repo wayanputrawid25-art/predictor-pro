@@ -1,7 +1,3 @@
-export const config = {
-  api: { bodyParser: true },
-};
-
 module.exports = async function handler(req, res) {
   try {
     const TOKEN = process.env.TELEGRAM_TOKEN;
@@ -10,6 +6,8 @@ module.exports = async function handler(req, res) {
     const body = typeof req.body === "string"
       ? JSON.parse(req.body)
       : req.body;
+
+    console.log("BODY:", body);
 
     // START
     if (body?.message?.text === "/start") {
@@ -32,7 +30,6 @@ Klik beli:`,
     if (body?.callback_query) {
       const chatId = body.callback_query.message.chat.id;
 
-      // jawab callback
       await fetch(`https://api.telegram.org/bot${TOKEN}/answerCallbackQuery`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -41,7 +38,6 @@ Klik beli:`,
         })
       });
 
-      // ambil payment
       const payRes = await fetch(`${BASE_URL}/api/create-payment?chatId=${chatId}`);
       const data = await payRes.json();
 
@@ -69,7 +65,7 @@ Setelah bayar file otomatis dikirim`);
     res.status(200).send("OK");
 
   } catch (e) {
-    console.error(e);
+    console.error("BOT ERROR:", e);
     res.status(200).send("OK");
   }
 };
