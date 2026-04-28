@@ -65,11 +65,15 @@ Klik beli:`,
         return sendMsg(chatId, "❌ Gagal membuat pembayaran");
       }
 
-      const url = data?.Data?.Url;
+      if (!data || data.error) {
+  return sendMsg(chatId, "❌ Gagal membuat pembayaran");
+}
 
-      if (!url) {
-        return sendMsg(chatId, "❌ Link pembayaran tidak tersedia");
-      }
+const url = data?.Data?.Url;
+
+if (!url) {
+  return sendMsg(chatId, "❌ Link pembayaran tidak tersedia");
+}
 
       await sendMsg(chatId,
 `💳 Pembayaran
