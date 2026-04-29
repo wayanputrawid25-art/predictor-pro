@@ -9,15 +9,27 @@ module.exports = async function handler(req, res) {
       product: ["Predictor Pro Elite"],
       qty: ["1"],
       price: ["15000"],
+      description: ["Pembelian"],
       returnUrl: "https://t.me/",
-      notifyUrl: process.env.BASE_URL + "/api/callback"
+      cancelUrl: "https://t.me/",
+      notifyUrl: process.env.BASE_URL + "/api/callback",
+      referenceId: "TRX-" + Date.now(),
+      buyerName: "User",
+      buyerEmail: "test@email.com",
+      buyerPhone: "08123456789"
     };
 
     const body = JSON.stringify(payload);
 
+    const method = "POST";
+    const endpoint = "/api/v2/payment";
+    const timestamp = Math.floor(Date.now() / 1000).toString();
+
+    const stringToSign = `${method}:${endpoint}:${body}:${timestamp}`;
+
     const signature = crypto
       .createHmac("sha256", apiKey)
-      .update(body)
+      .update(stringToSign)
       .digest("hex");
 
     const response = await fetch("https://my.ipaymu.com/api/v2/payment", {
@@ -26,7 +38,8 @@ module.exports = async function handler(req, res) {
         "Content-Type": "application/json",
         "Accept": "application/json",
         "va": va,
-        "signature": signature
+        "signature": signature,
+        "timestamp": timestamp
       },
       body: body
     });
