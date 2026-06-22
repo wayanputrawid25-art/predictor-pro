@@ -69,7 +69,7 @@ export default async function HomePage() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Today's Matches
+                Today&apos;s Matches
               </CardTitle>
             </CardHeader>
             <CardContent>
