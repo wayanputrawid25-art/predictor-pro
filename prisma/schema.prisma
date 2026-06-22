@@ -21,7 +21,6 @@ model League {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  teams     Team[]
   matches   Match[]
   standings LeagueStanding[]
 
@@ -90,7 +89,6 @@ model Match {
   stats       MatchStats?
   prediction  Prediction?
   events      MatchEvent[]
-  h2h         H2HRecord[]
 
   @@index([apiId])
   @@index([date])
@@ -250,7 +248,6 @@ model LeagueStanding {
   updatedAt   DateTime @updatedAt
 
   league League @relation(fields: [leagueId], references: [id])
-  team  Team    @relation(fields: [teamId], references: [id])
 
   @@unique([leagueId, teamId, season])
   @@index([leagueId, position])
