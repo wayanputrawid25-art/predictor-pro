@@ -1,0 +1,353 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+// League
+model League {
+  id        String   @id @default(cuid())
+  apiId     Int      @unique
+  name      String
+  country   String?
+  logo      String?
+  flag      String?
+  type      String   @default("league") // league, cup
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  teams     Team[]
+  matches   Match[]
+  standings LeagueStanding[]
+
+  @@index([apiId])
+  @@index([country])
+}
+
+// Team
+model Team {
+  id        String   @id @default(cuid())
+  apiId     Int      @unique
+  name      String
+  shortName String?
+  logo      String?
+  country   String?
+  founded   Int?
+  venue     String?
+  active    Boolean  @default(true)
+  elo       Float    @default(1500)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  homeMatches  Match[] @relation("HomeTeam")
+  awayMatches  Match[] @relation("AwayTeam")
+  standings    TeamStanding[]
+  injuries     Injury[]
+
+  @@index([apiId])
+  @@index([name])
+}
+
+// Match
+model Match {
+  id              String    @id @default(cuid())
+  apiId           Int       @unique
+  date            DateTime
+  status          String    @default("NS") // NS=Not Started, LIVE, FT=Finished, AET=After Extra Time, PEN=Penalties
+  minute          Int?
+  homeTeamId      String
+  awayTeamId      String
+  leagueId        String
+  homeScore       Int?
+  awayScore       Int?
+  homePenalties   Int?
+  awayPenalties   Int?
+  venue           String?
+  round           String?
+  season          String?
+  referee         String?
+  attendance      Int?
+  weather         String?
+  temperature     Float?
+  homeFormation  String?
+  awayFormation  String?
+  homeYellowCards Int?
+  awayYellowCards Int?
+  homeRedCards    Int?
+  awayRedCards    Int?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  homeTeam    Team        @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  awayTeam    Team        @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  league      League      @relation(fields: [leagueId], references: [id])
+  odds        MatchOdds[]
+  stats       MatchStats?
+  prediction  Prediction?
+  events      MatchEvent[]
+  h2h         H2HRecord[]
+
+  @@index([apiId])
+  @@index([date])
+  @@index([status])
+  @@index([leagueId])
+  @@index([homeTeamId])
+  @@index([awayTeamId])
+}
+
+// Match Statistics
+model MatchStats {
+  id              String @id @default(cuid())
+  matchId         String @unique
+  homeShots       Int?
+  awayShots       Int?
+  homeShotsOnGoal Int?
+  awayShotsOnGoal Int?
+  homeCorners     Int?
+  awayCorners     Int?
+  homeFouls       Int?
+  awayFouls       Int?
+  homeYellows     Int?
+  awayYellows     Int?
+  homeReds        Int?
+  awayReds        Int?
+  homePasses      Int?
+  awayPasses      Int?
+  homePassAccuracy Float?
+  awayPassAccuracy Float?
+  homePossession  Float?
+  awayPossession  Float?
+  homeSaves       Int?
+  awaySaves       Int?
+  homeOffsides    Int?
+  awayOffsides    Int?
+  homeDribbles    Int?
+  awayDribbles    Int?
+  homeTackles     Int?
+  awayTackles     Int?
+  homeInterceptions Int?
+  awayInterceptions Int?
+  createdAt       DateTime @default(now())
+
+  match Match @relation(fields: [matchId], references: [id])
+
+  @@index([matchId])
+}
+
+// Match Events (goals, cards, subs)
+model MatchEvent {
+  id        String   @id @default(cuid())
+  matchId   String
+  type      String   // goal, yellow_card, red_card, substitution, var
+  minute    Int
+  team      String   // home, away
+  player    String?
+  assist    String?
+  detail    String?  // goal_type (normal, penalty, own_goal), card_reason, etc.
+  createdAt DateTime @default(now())
+
+  match Match @relation(fields: [matchId], references: [id])
+
+  @@index([matchId])
+}
+
+// Head to Head Records
+model H2HRecord {
+  id          String   @id @default(cuid())
+  homeTeamId  String
+  awayTeamId  String
+  date        DateTime
+  homeScore   Int
+  awayScore   Int
+  leagueId    String
+  matchId     String?
+  createdAt   DateTime @default(now())
+
+  @@index([homeTeamId, awayTeamId])
+}
+
+// Match Odds
+model MatchOdds {
+  id              String   @id @default(cuid())
+  matchId         String
+  bookmaker       String
+  homeOdds        Float
+  drawOdds        Float
+  awayOdds        Float
+  over25Odds      Float?
+  under25Odds     Float?
+  bttsYesOdds     Float?
+  bttsNoOdds      Float?
+  handicapHome    Float?
+  handicapAway    Float?
+  handicapOdds   Float?
+  homeImpliedProb Float?
+  drawImpliedProb Float?
+  awayImpliedProb Float?
+  updatedAt       DateTime @default(now())
+  createdAt       DateTime @default(now())
+
+  match Match @relation(fields: [matchId], references: [id])
+
+  @@index([matchId])
+  @@index([bookmaker])
+}
+
+// Prediction
+model Prediction {
+  id                  String   @id @default(cuid())
+  matchId             String   @unique
+  homeWinProb         Float
+  drawProb            Float
+  awayWinProb         Float
+  bttsYesProb         Float?
+  bttsNoProb          Float?
+  over25Prob          Float?
+  under25Prob         Float?
+  homeHandicap        String?  // -1, +0.5, etc
+  handicapProb        Float?
+  predictedHomeScore  Int
+  predictedAwayScore  Int
+  confidence          Float    // 0-100
+  eloHome             Float
+  eloAway             Float
+  formHome            Float
+  formAway            Float
+  homeAdvantage       Float
+  factors             Json?    // Detailed breakdown
+  aiGenerated         Boolean  @default(false)
+  generatedAt         DateTime @default(now())
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  match Match @relation(fields: [matchId], references: [id])
+
+  @@index([matchId])
+  @@index([confidence])
+}
+
+// League Standing
+model LeagueStanding {
+  id          String   @id @default(cuid())
+  leagueId    String
+  position    Int
+  teamId      String
+  played      Int      @default(0)
+  won         Int      @default(0)
+  drawn       Int      @default(0)
+  lost        Int      @default(0)
+  goalsFor    Int      @default(0)
+  goalsAgainst Int     @default(0)
+  goalDiff    Int      @default(0)
+  points      Int      @default(0)
+  form        String?  // WWDWL
+  season      String?
+  updatedAt   DateTime @updatedAt
+
+  league League @relation(fields: [leagueId], references: [id])
+  team  Team    @relation(fields: [teamId], references: [id])
+
+  @@unique([leagueId, teamId, season])
+  @@index([leagueId, position])
+}
+
+// Team Standing
+model TeamStanding {
+  id          String   @id @default(cuid())
+  teamId      String
+  season      String
+  leagueId    String
+  homePlayed  Int      @default(0)
+  homeWon     Int      @default(0)
+  homeDrawn   Int      @default(0)
+  homeLost    Int      @default(0)
+  homeGF      Int      @default(0)
+  homeGA      Int      @default(0)
+  awayPlayed  Int      @default(0)
+  awayWon     Int      @default(0)
+  awayDrawn   Int      @default(0)
+  awayLost     Int      @default(0)
+  awayGF      Int      @default(0)
+  awayGA      Int      @default(0)
+  updatedAt   DateTime @updatedAt
+
+  team   Team   @relation(fields: [teamId], references: [id])
+
+  @@unique([teamId, season, leagueId])
+  @@index([teamId])
+}
+
+// Injuries
+model Injury {
+  id          String   @id @default(cuid())
+  teamId      String
+  player      String
+  type        String   // suspension, injury
+  reason      String?
+  status      String?  // doubtful, out, suspended
+  returnDate  DateTime?
+  createdAt   DateTime @default(now())
+
+  team Team @relation(fields: [teamId], references: [id])
+
+  @@index([teamId])
+}
+
+// Team Form History (for recent form calculation)
+model FormHistory {
+  id        String   @id @default(cuid())
+  teamId    String
+  matchId   String
+  result    String   // W, D, L, ND (not decided)
+  goalsFor  Int
+  goalsAgainst Int
+  homeAway  String   // home, away
+  date      DateTime
+  weight    Float    @default(1) // Recent matches weighted more
+  createdAt DateTime @default(now())
+
+  @@unique([teamId, matchId])
+  @@index([teamId, date])
+}
+
+// API Rate Limiting
+model RateLimitLog {
+  id        String   @id @default(cuid())
+  ip        String
+  endpoint  String
+  count     Int      @default(1)
+  windowStart DateTime @default(now())
+
+  @@index([ip, endpoint, windowStart])
+  @@index([windowStart])
+}
+
+// Cache Management
+model CacheEntry {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     Json
+  expiresAt DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([key])
+  @@index([expiresAt])
+}
+
+// Cron Job Logs
+model CronLog {
+  id        String   @id @default(cuid())
+  jobName   String
+  status    String   // success, failed, running
+  message   String?
+  startedAt DateTime @default(now())
+  finishedAt DateTime?
+  duration  Int?     // ms
+
+  @@index([jobName, startedAt])
+}
